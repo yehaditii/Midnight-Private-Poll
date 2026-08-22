@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sourceRoot": "../../../../",
+  "sources": ["contracts/poll.compact"],
+  "names": [],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAYA;;;;;;;;;;;;;MAIA,AAAA,SAGC;;;;;;;;;;;;;;;;;;;;;;OAAA;MAID,AAAA,QAQC;;;;;;;;;;;;;;;;;;;;;;OAAA;;;;;;;;;;GAjBA;EAFD;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IAPA;;;;;;;;;yEAAgC;IAChC;;;;;;;;;yEAA+B;IAC/B;;;;;;;;;yEAA8B;IAM1B;;;;;;;;;yEAAM;;;;;;;GACT;EAJD,AAAA,YAA6B;;0DAA7B,SAA6B;;;;;;;;;;;;;;GAAA;EAM7B,AAAA,YAGC;oDAFU;;;;;;;;;;;yHAAM;;IACb;;;;;;;;;yEAAM;;GACT;EAID,AAAA,WAQC;oDAPU;;;;;;;;;;;yHAAM;;UACP,MAAkB;QACX,MAAI;YACb,KAAQ;MAAR;;;;;;;;;;+FAAA,KAAQ;;;;0EAAA;;YAER,KAAO;MAAP;;;;;;;;;;+FAAA,KAAO;;;;0EAAA;;;GAEd;;;;;;;;;;;;;;;;IA1BD;qCAAA;;;;;;;;;;;0GAAgC;KAAA;IAChC;qCAAA;;;;;;;;;;;0GAA+B;KAAA;IAC/B;qCAAA;;;;;;;;;;;0GAA8B;KAAA;;;;;;;;;;"
+}
