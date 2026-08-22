@@ -15,8 +15,8 @@ build/
 .env.test.local
 .env.production.local
 
-# Contract artifacts
-contracts/managed/
+# Compact compile output (keys/circuits) is committed so the Level 1
+# managed/ artifacts are present in the repository.
 
 # Deployment info
 deployment.json
@@ -48,6 +48,7 @@ coverage/
 
 # Private state
 *-state/
+midnight-level-db/
 
 # Temporary files
 tmp/

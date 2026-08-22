@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { resolveNetwork, setActiveNetwork, parseNetworkFlag } from './network';
 
 function run(cmd: string, args: string[]): void {
-  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: false });
+  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: true });
   if (r.status !== 0) {
     process.stderr.write(`\nCommand failed: ${cmd} ${args.join(' ')}\n`);
     process.exit(r.status ?? 1);
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   if (flag) setActiveNetwork(flag);
   const { network, config } = resolveNetwork({ argv });
 
-  process.stdout.write(`\n→ Setting up midnight-private-poll-scaffold on network: ${network}\n\n`);
+  process.stdout.write(`\n→ Setting up Midnight Private Poll on network: ${network}\n\n`);
 
   // 1. Bring up only the services this network needs.
   run('docker', ['compose', 'up', '-d', '--wait', ...config.composeServices]);
