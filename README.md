@@ -1,210 +1,188 @@
-# midnight-private-poll-scaffold
+# Midnight Private Poll
 
-A Midnight Network smart contract scaffolded with create-mn-app.
+## Overview
 
-## Quick start
+Midnight Private Poll is a minimal YES/NO Compact contract on the Midnight Network. It shows how a private vote can be supplied through a local witness, proven in a zero-knowledge circuit, and used to update public aggregate tallies without storing the individual Boolean as a named ledger field.
 
-Requirements: Node 22, Docker (with Compose v2), and the Compact compiler at the version pinned in `.compact-version` at the create-mn-app repo root (the version this project was scaffolded against).
+The project is based on the current `create-mn-app` hello-world scaffold (Midnight.js 4.1.x, Compact language `>= 0.23`) and replaces the sample message contract with a small poll.
+
+## Privacy Model
+
+Compact treats witness data as private by default. A value derived from a witness may not cross a **visibility boundary** (ledger write, exported circuit return, or contract-to-contract call) unless the program wraps it in `disclose()`.
+
+This contract uses that rule on purpose:
+
+- `localVote()` is a **private witness**. The DApp provides the YES/NO bit on the user's machine. It is not a ledger field.
+- `yesVotes`, `noVotes`, and `isOpen` are **public ledger** state. Anyone can read them from the chain.
+- `disclose(vote)` is required because the witness Boolean decides which public counter is incremented. `disclose()` itself does not publish a value; it tells the compiler that this witness-derived Boolean is allowed to influence public state.
+- The individual vote is **not stored** as `vote` on the ledger. The public effect of a vote is a counter increment.
+- **Honest limitation:** if an observer watches each transaction and compares public counters before and after, they can infer whether that transaction incremented YES or NO. Aggregates are public; per-transaction deltas of those aggregates are also public. What stays off-ledger is the witness callback and the fact that Compact does not emit a named `vote` field.
+
+## Architecture
+
+| Piece | Role |
+|---|---|
+| `contracts/poll.compact` | Compact source: constructor, `castVote`, `closePoll` |
+| `contracts/managed/poll/` | Compiler output: JS bindings, ZKIR, proving/verifying keys |
+| `src/witnesses.ts` | TypeScript implementation of `localVote` |
+| `src/deploy.ts` | Deploy to local devnet, Preview, or Preprod |
+| `src/cli.ts` | Cast a vote, read tallies, close the poll |
+| `tests/poll.test.ts` | Compact-runtime unit tests (no chain required) |
+
+## Prerequisites
+
+- Node.js 22+
+- npm 10+
+- Docker Desktop with Compose v2 (Linux engine)
+- Compact compiler (`compact` CLI) matching language `>= 0.23`
+- Git
+- On Windows: WSL2/Ubuntu is useful if the Compact installer is Unix-only
+
+Install Compact from current Midnight docs:
 
 ```bash
-npm install
-npm run setup
-npm run test:e2e
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+compact update
+compact --version
+compact compile --version
 ```
 
-`npm run setup` runs end-to-end with no prompts:
+## Installation
 
-1. `docker compose up -d --wait` — starts a local Midnight devnet (node, indexer, proof-server) and blocks until all three pass their healthchecks.
-2. `npm run compile` — compiles `contracts/hello-world.compact` to `contracts/managed/hello-world/`.
-3. `npm run deploy` — derives the genesis-seed wallet (NIGHT pre-minted), registers UTXOs for DUST generation, deploys the contract, writes `.midnight-state.json`.
+```bash
+git clone https://github.com/aditi/Midnight-Private-Poll.git
+cd Midnight-Private-Poll
+npm install
+```
 
-`npm run test:e2e` reconnects to the deployed contract and reads its ledger state. Exits 0 if the contract is live and indexable.
+## Running Locally
 
-## Local devnet
+Start the bundled undeployed devnet (node, indexer, proof-server), compile, and deploy:
 
-The project ships its own devnet via `docker-compose.yml`:
+```bash
+npm run setup
+```
 
-| Service        | Port | Purpose                                         |
-| -------------- | ---- | ----------------------------------------------- |
-| `node`         | 9944 | Midnight node, `dev` chain preset               |
-| `indexer`      | 8088 | GraphQL indexer for chain state                 |
-| `proof-server` | 6300 | Generates ZK proofs for contract transactions   |
+Then:
 
-State lives in container-managed volumes. Tear everything down with:
+```bash
+npm run cli
+npm run check-balance
+```
+
+Proof server only:
+
+```bash
+npm run proof-server:start
+npm run proof-server:stop
+```
+
+Tear down the local chain:
 
 ```bash
 docker compose down -v
 ```
 
-That removes all containers, networks, and volumes. The next `npm run setup` starts from a clean slate.
-
-## ⚠️ LOCAL DEVNET ONLY
-
-The deploy script uses a well-known genesis seed (`0000…0001`) so the
-pre-minted NIGHT in the `dev` chain preset is immediately available. **Do
-not use this seed against Preprod, mainnet, or any environment that
-handles real value** — anyone running this devnet has full access to
-funds at this seed.
-
-## Networks
-
-This DApp supports three networks:
-
-| Network | When to use | Default? |
-|---|---|---|
-| `undeployed` | Local devnet bundled in `docker-compose.yml`. Genesis seed is hardcoded; no funding needed. | yes |
-| `preview` | Public preview testnet. Faucet at `https://midnight-tmnight-preview.nethermind.dev`. |  |
-| `preprod` | Public preprod testnet. Faucet at `https://midnight-tmnight-preprod.nethermind.dev`. |  |
-
-The active network is **sticky**: whichever network you last interacted
-with stays active until you switch. Any command run with `--network <name>`
-also sets that network active for subsequent commands. The default on a
-fresh project is `undeployed` (local devnet).
-
-```sh
-npm run setup -- --network preview   # runs on preview AND makes it active
-npm run cli                          # still uses preview
-npm run check-balance                # still uses preview
-```
-
-You can also switch without running anything else:
-
-```sh
-npm run network preview         # active network is now preview
-npm run network                 # prints current active network
-npm run network undeployed      # switch back to local devnet
-```
-
-### How wallets work across networks
-
-- `undeployed` uses a hardcoded genesis seed. Local devnet pre-funds it.
-- `preview` and `preprod` generate a fresh wallet on first use: a 24-word
-  BIP-39 recovery phrase (printed once) plus its derived seed, both stored
-  in `.midnight-state.json` (gitignored). The wallet survives switching
-  networks — switch back later and your funded wallet returns.
-- **Back up your recovery phrase** if you fund a public-network wallet you
-  care about. It is printed when the wallet is created and kept in
-  `.midnight-state.json` under `wallets.<network>.mnemonic`. Anyone holding
-  the phrase controls the wallet.
-- Wallets created before mnemonic support keep working from their stored
-  `seed`; they just have no phrase to import into Lace.
-
-### Using the same wallet as Lace
-
-Seeds are derived with the standard BIP-39 `mnemonicToSeed` step — the same
-convention Lace uses — so identity is portable in both directions:
-
-- **Bring your Lace wallet here**: pass your recovery phrase via the
-  `MIDNIGHT_WALLET_MNEMONIC` env var — the derived addresses match Lace.
-  To keep the phrase out of your shell history, enter it with a hidden
-  prompt instead of typing it inline:
-
-  ```bash
-  read -s MIDNIGHT_WALLET_MNEMONIC && export MIDNIGHT_WALLET_MNEMONIC
-  npm run deploy
-  ```
-- **Take a scaffold wallet to Lace**: restore Lace from the 24-word phrase
-  in `.midnight-state.json`.
-
-### Funding a public-network wallet
-
-On the first run with `--network preview` (or `preprod`):
-
-1. `setup` will print your wallet address and the faucet URL.
-2. Open the faucet URL, paste the address, request tNIGHT.
-3. `setup` polls the wallet balance every 10 s and continues automatically
-   once funds arrive.
-4. The default poll budget is 10 minutes. Override with
-   `MIDNIGHT_FAUCET_TIMEOUT_MS=1800000` (30 min) for unattended runs.
-
-If the faucet is slow or the script times out, your seed is preserved.
-Re-run `npm run setup -- --network preview` once the funds land.
-
-### Environment overrides
-
-These env vars override the active network's config (no per-network
-suffix — they apply to whichever network is active for the run):
-
-| Variable | Effect |
-|---|---|
-| `MIDNIGHT_WALLET_SEED` | Use this hex seed (32-128 hex chars; a Lace-compatible BIP-39 seed is 128) instead of generating/persisting one. Useful for CI with a pre-funded wallet. |
-| `MIDNIGHT_WALLET_MNEMONIC` | Use this BIP-39 recovery phrase instead of generating a wallet — e.g. your Lace phrase, for the same addresses as Lace. Not persisted. Set only one of seed/mnemonic. |
-| `MIDNIGHT_INDEXER_URL` | Override the indexer GraphQL URL. |
-| `MIDNIGHT_INDEXER_WS_URL` | Override the indexer WS URL. |
-| `MIDNIGHT_NODE_URL` | Override the node RPC URL. |
-| `MIDNIGHT_FAUCET_URL` | Override the faucet URL printed during setup. |
-| `MIDNIGHT_PROOF_SERVER_URL` | Override the proof server URL — set to a public proof server (e.g. `https://lace-proof-pub.preview.midnight.network`) to skip running one locally. |
-| `MIDNIGHT_FAUCET_TIMEOUT_MS` | Faucet poll budget in milliseconds (default 600000 = 10 min). |
-
-By default all networks use the **local** proof server. Public proof
-servers exist (see the env override above) but the local default keeps
-your witness data on your machine and avoids depending on a remote
-service for the deploy hot path.
-
-### Switching back to local devnet
-
-```sh
-npm run network undeployed     # or: npm run setup -- --network undeployed
-```
-
-Your preview/preprod wallet seeds and deploy addresses stay in
-`.midnight-state.json`. Switch back later, and they're still there.
-
-### Wallet sync cache
-
-After each `deploy`, `cli`, or `check-balance` run, the scripts serialize the
-wallet's synced state to `.midnight-wallet-state/<network>/` (gitignored).
-The next run on the same network restores from that snapshot and only catches
-up to the latest block instead of replaying from genesis — meaningful on
-`preview` / `preprod` where a from-seed sync takes minutes.
-
-If the cache is stale or corrupt (e.g. after an SDK upgrade with an
-incompatible state format) the wallet falls back to a fresh from-seed sync
-with a one-line warning. `npm run clean` removes the cache along with other
-generated state.
-
-## Available scripts
-
-| Script                  | Description                                                    |
-| ----------------------- | -------------------------------------------------------------- |
-| `npm run setup`         | One-shot: start devnet, compile, deploy.                       |
-| `npm run compile`       | Compile the Compact contract.                                  |
-| `npm run deploy`        | Deploy the compiled contract (requires devnet up + compiled).  |
-| `npm run cli`           | Interactive CLI to call circuits on the deployed contract.     |
-| `npm run check-balance` | Print the genesis-seed wallet's NIGHT and DUST balances.       |
-| `npm run test:e2e`      | Smoke + read-back check against the deployed contract.         |
-| `npm run clean`         | Remove `contracts/managed/`, `.midnight-state.json`, and `.midnight-wallet-state/`. |
-| `npm run proof-server:start` / `:stop` | Compose lifecycle for just the proof-server service. |
-
-## Project structure
-
-```
-midnight-private-poll-scaffold/
-├── contracts/
-│   └── hello-world.compact     # Compact source
-├── scripts/
-│   └── e2e-check.ts            # smoke + read-back
-├── src/
-│   ├── network.ts              # network selection + state file management
-│   ├── wallet.ts               # wallet construction + sync-state cache
-│   ├── setup.ts                # orchestrator for `npm run setup`
-│   ├── deploy.ts               # deploy the contract
-│   ├── cli.ts                  # interact with deployed contract
-│   └── check-balance.ts        # NIGHT / DUST balance
-├── docker-compose.yml          # node + indexer + proof-server
-├── .midnight-state.json        # written by deploy (gitignored)
-├── .midnight-wallet-state/     # serialized sync state per network (gitignored)
-├── package.json
-└── tsconfig.json
-```
-
-## Compact compiler version
-
-`.compact-version` at the create-mn-app repo root pinned the compiler
-version this project was scaffolded against. To upgrade your local
-compiler to that version:
+## Compile
 
 ```bash
-compact update <version>
-compact use <version>
+npm run compile
 ```
+
+This runs:
+
+```bash
+compact compile contracts/poll.compact contracts/managed/poll
+```
+
+Success writes TypeScript/JS bindings plus circuit artifacts under `contracts/managed/poll/`.
+
+## Test
+
+Unit tests (after a successful compile):
+
+```bash
+npm test
+```
+
+Optional read-back against a live deployment:
+
+```bash
+npm run test:e2e
+```
+
+## Generated Artifacts
+
+`contracts/managed/poll/` is Compact compiler output, not hand-written code. Typical contents:
+
+- `contract/` — JS/TS contract class and `ledger()` decoder
+- `keys/` — proving/verifying keys
+- `zkir/` — circuit IR used by the proof server
+
+Do not edit these files. Re-run `npm run compile` after changing `poll.compact`.
+
+## Deployment
+
+### Local undeployed (default)
+
+Uses the well-known genesis seed. **Do not use that seed on Preview, Preprod, or mainnet.**
+
+```bash
+npm run setup
+```
+
+### Preview or Preprod
+
+Network URLs come from `src/network.ts` (official Preview/Preprod indexer, RPC, and faucet hosts). Do not invent RPC URLs.
+
+```bash
+npm run setup -- --network preview
+# or
+npm run setup -- --network preprod
+```
+
+On first public-network run the scripts generate a 24-word BIP-39 phrase, print it once, and store it in `.midnight-state.json` (gitignored). Fund the printed address from the faucet shown in the logs:
+
+- Preview: `https://midnight-tmnight-preview.nethermind.dev`
+- Preprod: `https://midnight-tmnight-preprod.nethermind.dev`
+
+The setup script waits for tNIGHT, registers NIGHT for DUST, then deploys.
+
+Optional env overrides (see `src/network.ts`): `MIDNIGHT_WALLET_SEED`, `MIDNIGHT_WALLET_MNEMONIC`, `MIDNIGHT_PROOF_SERVER_URL`, faucet/indexer/node URLs.
+
+Public proof server example (Preview): `https://lace-proof-pub.preview.midnight.network`
+
+## Deployed Contract
+
+Network: TBD (Preview or Preprod after a real deploy)
+
+Contract Address: TBD
+
+Do not treat local undeployed addresses as the Level 1 public-network address.
+
+## Public State vs Private Witness
+
+| Item | Where it lives | Who can see it |
+|---|---|---|
+| `yesVotes` | Public ledger | Anyone reading contract state |
+| `noVotes` | Public ledger | Anyone reading contract state |
+| `isOpen` | Public ledger | Anyone reading contract state |
+| `localVote()` YES/NO bit | Private witness (DApp) | The proving user; not a ledger field |
+| `disclose(vote)` | Compiler annotation | Allows the bit to choose which counter updates |
+| Per-tx counter delta | Public ledger history | Inferable by watching each transaction |
+
+## Initial Product Idea
+
+Midnight Private Poll is a privacy-first polling application where users can participate in polls without storing each individual choice as a named public field. A private witness supplies the YES/NO bit on the user's machine; the circuit proves a valid vote and updates verifiable public tallies. `disclose()` is used only so that witness-derived control flow may touch those public counters — the smallest disclosure Compact requires for this design — while unused private material never crosses a visibility boundary.
+
+## Level 1 Checklist
+
+- [x] Toolchain installed (Node 22, Docker, Compact)
+- [x] Compact contract written
+- [x] Contract compiles
+- [x] Tests pass
+- [x] managed/ generated
+- [ ] Contract deployed
+- [ ] Contract address documented
+- [x] README completed (address pending Preview/Preprod deploy)
+- [ ] 5 meaningful commits
