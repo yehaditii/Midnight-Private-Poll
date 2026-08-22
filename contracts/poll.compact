@@ -1,0 +1,32 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Public ledger: anyone can read these fields from on-chain contract state.
+export ledger yesVotes: Counter;
+export ledger noVotes: Counter;
+export ledger isOpen: Boolean;
+
+// Private witness: supplied locally by the DApp, not stored as a ledger field.
+witness localVote(): Boolean;
+
+constructor() {
+    isOpen = true;
+}
+
+export circuit closePoll(): [] {
+    assert(isOpen, "Poll is already closed");
+    isOpen = false;
+}
+
+// disclose(vote) is required because the YES/NO bit decides which public
+// counter is updated. Compact treats that as a visibility boundary.
+export circuit castVote(): [] {
+    assert(isOpen, "Poll is closed");
+    const vote = localVote();
+    if (disclose(vote)) {
+        yesVotes.increment(1);
+    } else {
+        noVotes.increment(1);
+    }
+}
