@@ -1,3 +1,6 @@
+import type { WitnessContext } from '@midnight-ntwrk/compact-runtime';
+import type { Ledger } from '../contracts/managed/poll/contract/index.js';
+
 export type PollPrivateState = {
   vote: boolean;
 };
@@ -12,8 +15,8 @@ export function setPendingVote(vote: boolean): void {
 }
 
 export const witnesses = {
-  localVote: ({ privateState }: { privateState: PollPrivateState }): [PollPrivateState, boolean] => [
-    privateState,
+  localVote: (context: WitnessContext<Ledger, PollPrivateState>): [PollPrivateState, boolean] => [
+    context.privateState,
     pendingVote,
   ],
 };

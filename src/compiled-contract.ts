@@ -2,7 +2,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-js';
-import { witnesses } from './witnesses.js';
+import type { Contract as PollContract, Witnesses as PollWitnesses } from '../contracts/managed/poll/contract/index.js';
+import { witnesses, type PollPrivateState } from './witnesses.js';
 
 export const PRIVATE_STATE_ID = 'pollPrivateState';
 export const PRIVATE_STATE_STORE = 'poll-private-state';
@@ -17,8 +18,12 @@ export async function loadCompiledPoll() {
     process.exit(1);
   }
   const Poll = await import(pathToFileURL(contractPath).href);
-  const compiledContract = CompiledContract.make('poll', Poll.Contract).pipe(
-    CompiledContract.withWitnesses(witnesses),
+  const pollWitnesses: PollWitnesses<PollPrivateState> = witnesses;
+  const compiledContract = CompiledContract.make<PollContract<PollPrivateState, PollWitnesses<PollPrivateState>>>(
+    'poll',
+    Poll.Contract as any,
+  ).pipe(
+    CompiledContract.withWitnesses(pollWitnesses),
     CompiledContract.withCompiledFileAssets(zkConfigPath),
   );
   return { Poll, compiledContract };

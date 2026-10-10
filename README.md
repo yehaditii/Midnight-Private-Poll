@@ -50,10 +50,24 @@ compact compile --version
 ## Installation
 
 ```bash
-git clone https://github.com/aditi/Midnight-Private-Poll.git
+git clone https://github.com/yehaditii/Midnight-Private-Poll.git
 cd Midnight-Private-Poll
 npm install
 ```
+
+## Verified Local Status
+
+The current codebase is verified in this workspace with the project’s actual commands:
+
+```bash
+npm run compile
+npm test
+```
+
+Results from the current checkout:
+- `npm run compile` succeeds and regenerates the managed artifacts under `contracts/managed/poll/`.
+- `npm test` passes: 7/7 tests passing.
+- Deployment and proof-server startup are blocked until Docker Desktop / the Docker engine is running locally.
 
 ## Running Locally
 
@@ -154,9 +168,11 @@ Public proof server example (Preview): `https://lace-proof-pub.preview.midnight.
 
 ## Deployed Contract
 
-Network: TBD (Preview or Preprod after a real deploy)
+Status: deployment is not yet verified in this workspace because the Docker daemon is unavailable.
 
-Contract Address: TBD
+Network: pending local Docker Desktop startup and proof-server availability
+
+Contract Address: pending real Preview/Preprod deployment
 
 Do not treat local undeployed addresses as the Level 1 public-network address.
 
@@ -182,7 +198,7 @@ Midnight Private Poll is a privacy-first polling application where users can par
 - [x] Contract compiles
 - [x] Tests pass
 - [x] managed/ generated
-- [ ] Contract deployed
-- [ ] Contract address documented
-- [x] README completed (address pending Preview/Preprod deploy)
-- [ ] 5 meaningful commits
+- [ ] Contract deployed (blocked until Docker Desktop is running)
+- [ ] Contract address documented (pending real deploy)
+- [x] README completed (with verified local status and deployment blocker noted)
+- [x] 5 meaningful commits in the repository history
