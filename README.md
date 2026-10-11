@@ -92,7 +92,6 @@ Community organizers can run a simple YES/NO poll where the contract publishes a
 ├── package-lock.json
 ├── README.md
 ├── screenshots/
-│   ├── compile-output.png
 │   ├── contract-deployment.png
 │   └── test-output.png
 ├── tsconfig.json
@@ -230,9 +229,7 @@ This is not ballot secrecy or anonymity: because the public counters change with
 
 ## Screenshots
 
-These screenshots capture the successful validation steps from the verified environment.
-
-![Compile output](screenshots/compile-output.png)
+These screenshots capture the successful validation steps from the verified environment. The compile step was validated via terminal output and is not represented by a saved image file in this repository.
 
 ![Test output](screenshots/test-output.png)
 
