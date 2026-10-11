@@ -10,10 +10,8 @@ build/
 
 # Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
 # Compact compile output (keys/circuits) is committed so the Level 1
 # managed/ artifacts are present in the repository.
@@ -21,7 +19,7 @@ build/
 # Deployment info
 deployment.json
 
-# Wallet seed (sensitive)
+# Wallet credentials (sensitive)
 
 # OS generated files
 .DS_Store
@@ -59,3 +57,4 @@ temp/
 
 # Midnight wallet sync state (per-network serialized wallet state cache)
 .midnight-wallet-state/
+.midnight-state.json.tmp-*

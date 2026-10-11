@@ -69,9 +69,9 @@ export const NETWORK_CONFIGS: Record<NetworkId, NetworkConfig> = {
   },
   preprod: {
     networkId: 'preprod',
-    indexer:   'https://indexer.preprod.midnight.network/api/v4/graphql',
-    indexerWS: 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
-    node:      'https://rpc.preprod.midnight.network',
+    indexer:   'https://midnight-preprod.blockfrost.io/api/v0',
+    indexerWS: 'wss://midnight-preprod.blockfrost.io/api/v0/ws',
+    node:      'https://rpc.midnight-preprod.blockfrost.io',
     proofServer: 'http://127.0.0.1:6300',
     faucet: 'https://midnight-tmnight-preprod.nethermind.dev',
     composeServices: ['proof-server'],
@@ -176,6 +176,30 @@ function applyEnvOverrides(base: NetworkConfig, env: NodeJS.ProcessEnv): Network
     const v = env[varName];
     if (v) (out as unknown as Record<string, unknown>)[field] = v;
   }
+
+  if (out.networkId === 'preprod') {
+    const projectId = env.MIDNIGHT_BLOCKFROST_PROJECT_ID?.trim();
+    const hasCustomEndpoints = [
+      'MIDNIGHT_INDEXER_URL',
+      'MIDNIGHT_INDEXER_WS_URL',
+      'MIDNIGHT_NODE_URL',
+    ].every((name) => Boolean(env[name]?.trim()));
+
+    if (!projectId && !hasCustomEndpoints) {
+      throw new Error(
+        'Preprod requires MIDNIGHT_BLOCKFROST_PROJECT_ID or explicit MIDNIGHT_INDEXER_URL, MIDNIGHT_INDEXER_WS_URL, and MIDNIGHT_NODE_URL values.',
+      );
+    }
+
+    if (projectId) {
+      for (const field of ['indexer', 'indexerWS', 'node'] as const) {
+        const url = new URL(out[field]);
+        if (!url.searchParams.has('project_id')) url.searchParams.set('project_id', projectId);
+        out[field] = url.toString();
+      }
+    }
+  }
+
   return out;
 }
 

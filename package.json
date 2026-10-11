@@ -6,8 +6,8 @@
   "author": "",
   "license": "MIT",
   "scripts": {
-    "compile": "compact compile contracts/poll.compact contracts/managed/poll",
-    "build": "npx tsc --noEmit || true",
+    "compile": "node scripts/compile.mjs",
+    "build": "npx tsc --noEmit",
     "setup": "npx tsx src/setup.ts",
     "deploy": "npx tsx src/deploy.ts",
     "cli": "npx tsx src/cli.ts",
